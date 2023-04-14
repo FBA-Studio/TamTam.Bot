@@ -10,14 +10,11 @@ namespace TamTam.Bot.Types
 
         [JsonConverter(typeof(UnixDateTimeConverter))]
         public DateTime TimeStamp;
+        public string Text;
         public Link? Link;
         public MessageBody Body;
         public Stat? Stat;
         public string? Url;
         public User Constructor;
-    }
-    public class Stat
-    {
-        public int Views;
     }
 }

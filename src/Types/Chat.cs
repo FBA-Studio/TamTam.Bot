@@ -23,5 +23,6 @@ namespace TamTam.Bot.Types
         public Dialog? DialogWithUser;
         public int? MessagesCount;
         public string? ChatMessageId;
+        public Message? PinnedMessage;
     }
 }
