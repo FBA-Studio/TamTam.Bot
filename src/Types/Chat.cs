@@ -20,6 +20,7 @@ namespace TamTam.Bot.Types
         public bool IsPublic;
         public string? Link;
         public string? Description;
+        public Dialog? DialogWithUser;
         public int? MessagesCount;
         public string? ChatMessageId;
     }
