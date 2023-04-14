@@ -1,1 +1,1 @@
-# TamTam.Bot
+<h1 align="center"><img src="https://raw.githubusercontent.com/FBA-Studio/TamTam.Bot/main/raws/tamtamb-bot-logo.svg?token=GHSAT0AAAAAAB4D5FSDPTIMKEBGIVBAY3LSZBZXHXQ" align="center" height="46"></img>TamTam.Bot</h1>
