@@ -28,16 +28,13 @@ namespace TamTam.Bot
             Marker = 0;
         }
 
-        public void StartPolling() {
-
-        }
-
-        private async void Receive() {
+        public async void StartPolling(Func<Update, Task> updateHandler) {
             while(true) {
                 var updates = await GetUpdates();
                 Marker = Math.Max(Marker, updates.Marker);
                 foreach (var update in updates.Updates) {
-
+                    var upd = ParseRawUpdate(update);
+                    await updateHandler.Invoke(upd);
                 }
             }
         }
@@ -47,7 +44,10 @@ namespace TamTam.Bot
             switch (raw.UpdateType)
             {
                 case UpdateType.BotAdded:
-                    update.BotAdded = new BotAdded();
+                    update.BotAdded = new BotAdded() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, IsChannel = raw.IsChannel.Value };
+                    break;
+                case UpdateType.UserAdded:
+                    update.UserAdded = new UserAdded() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, InviterId = raw.InviterId.Value, IsChannel = raw.IsChannel.Value } ;
                     break;
             }
             return update;
