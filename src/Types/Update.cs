@@ -1,15 +1,30 @@
 using System;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using TamTam.Bot.Types.Enums;
+using TamTam.Bot.Types.Updates;
 
-namespace TamTam.Bot.Types{
-
+namespace TamTam.Bot.Types {
     public class Update {
         public UpdateType UpdateType;
 
-        [JsonConverter(typeof(UnixDateTimeConverter))]
-        public DateTime TimeStamp;
-        
+        #nullable enable
+        public BotAdded? BotAdded;
+
+        #nullable enable
+        public BotRemoved? BotRemoved;
+
+        #nullable enable
+        public MessageCallback? MessageCallback;
+
+        #nullable enable
+        public MessageCreated? MessageCreated;
+
+        #nullable enable
+        public MessageEdited? MessageEdited;
+
+        #nullable enable
+        public MessageRemoved? MessageRemoved;
+
+        #nullable enable
+        public UserAdded? UserAdded;
     }
 }
