@@ -4,7 +4,7 @@ using Newtonsoft.Json.Converters;
 
 namespace TamTam.Bot.Types
 {
-    public class DialogWithUser {
+    public class Dialog {
         public long UserId;
         public string Name;
         public string? Username;
