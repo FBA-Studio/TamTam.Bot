@@ -13,6 +13,12 @@ namespace TamTam.Bot.Types {
         public BotRemoved? BotRemoved;
 
         #nullable enable
+        public BotStarted? BotStarted;
+
+        #nullable enable
+        public ChatTitleChanged? ChatTitleChanged;
+
+        #nullable enable
         public MessageCallback? MessageCallback;
 
         #nullable enable

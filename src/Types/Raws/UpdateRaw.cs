@@ -21,6 +21,8 @@ namespace TamTam.Bot.Types{
     public bool? IsChannel;
     public long? InviterId;
 
+    public Payload? Payload;
     public long? AdminId;
+    public string? Title;
   }
 }
