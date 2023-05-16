@@ -28,32 +28,49 @@ namespace TamTam.Bot
             Marker = 0;
         }
 
-        public async void StartPolling(Func<Update, Task> updateHandler) {
+        public async void StartPolling(Func<Update, Task> updateHandler, UpdateType[] allowedUpdates = null) {
             while(true) {
                 var updates = await GetUpdates();
                 Marker = Math.Max(Marker, updates.Marker);
                 foreach (var update in updates.Updates) {
-                    var upd = ParseRawUpdate(update);
-                    await updateHandler.Invoke(upd);
+                    if(allowedUpdates == null) {
+                        var upd = ParseRawUpdate(update);
+                        await updateHandler.Invoke(upd);
+                    }
+                    else {
+                        foreach(var allwUpdate in allowedUpdates) {
+                            if(allwUpdate == update.UpdateType) {
+                                var upd = ParseRawUpdate(update);
+                                await updateHandler.Invoke(upd);
+                                break;
+                            }
+                        }
+                    }
                 }
             }
         }
 
         private Update ParseRawUpdate(UpdateRaw raw) {
-            var update = new Update() {UpdateType = raw.UpdateType };
+            var update = new Update() { UpdateType = raw.UpdateType };
             switch (raw.UpdateType)
             {
                 case UpdateType.BotAdded:
                     update.BotAdded = new BotAdded() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, IsChannel = raw.IsChannel.Value };
                     break;
                 case UpdateType.UserAdded:
-                    update.UserAdded = new UserAdded() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, InviterId = raw.InviterId.Value, IsChannel = raw.IsChannel.Value } ;
+                    update.UserAdded = new UserAdded() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, InviterId = raw.InviterId.Value, IsChannel = raw.IsChannel.Value };
                     break;
                 case UpdateType.BotRemoved:
-                    update.BotRemoved = new BotRemoved() {TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, IsChannel = raw.IsChannel.Value };
+                    update.BotRemoved = new BotRemoved() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, IsChannel = raw.IsChannel.Value };
                     break;
                 case UpdateType.MessageCallback:
-                    update.MessageCallback = new MessageCallback() {TimeStamp = raw.TimeStamp, Callback = raw.Callback, Message = raw.Message, UserLocale = raw.UserLocale };
+                    update.MessageCallback = new MessageCallback() { TimeStamp = raw.TimeStamp, Callback = raw.Callback, Message = raw.Message, UserLocale = raw.UserLocale };
+                    break;
+                case UpdateType.MessageCreated:
+                    update.MessageCreated = new MessageCreated() { TimeStamp = raw.TimeStamp, Message = raw.Message, UserLocale = raw.UserLocale };
+                    break;
+                case UpdateType.MessageRemoved:
+                    update.MessageRemoved = new MessageRemoved() { TimeStamp = raw.TimeStamp, MessageId = raw.MessageId, ChatId = raw.ChatId.Value, UserId = raw.UserId.Value};
                     break;
             }
             return update;
@@ -100,8 +117,6 @@ namespace TamTam.Bot
                 return null;
             }
         }
-
-
         public async Task<User> GetMeAsync() {
             var response = await MakeRequest("GET", "me", new Dictionary<string, string>());
             return JObject.Parse(response).ToObject<User>();
