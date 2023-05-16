@@ -49,6 +49,12 @@ namespace TamTam.Bot
                 case UpdateType.UserAdded:
                     update.UserAdded = new UserAdded() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, InviterId = raw.InviterId.Value, IsChannel = raw.IsChannel.Value } ;
                     break;
+                case UpdateType.BotRemoved:
+                    update.BotRemoved = new BotRemoved() {TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, IsChannel = raw.IsChannel.Value };
+                    break;
+                case UpdateType.MessageCallback:
+                    update.MessageCallback = new MessageCallback() {TimeStamp = raw.TimeStamp, Callback = raw.Callback, Message = raw.Message, UserLocale = raw.UserLocale };
+                    break;
             }
             return update;
         }
@@ -93,6 +99,12 @@ namespace TamTam.Bot
             catch(Exception exc) {
                 return null;
             }
+        }
+
+
+        public async Task<User> GetMeAsync() {
+            var response = await MakeRequest("GET", "me", new Dictionary<string, string>());
+            return JObject.Parse(response).ToObject<User>();
         }
     }
 }
