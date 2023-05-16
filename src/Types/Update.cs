@@ -26,5 +26,8 @@ namespace TamTam.Bot.Types {
 
         #nullable enable
         public UserAdded? UserAdded;
+
+        #nullable enable
+        public UserRemoved? UserRemoved;
     }
 }

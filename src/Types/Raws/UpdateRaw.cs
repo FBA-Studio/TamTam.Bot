@@ -20,5 +20,7 @@ namespace TamTam.Bot.Types{
     public string? UserLocale;
     public bool? IsChannel;
     public long? InviterId;
+
+    public long? AdminId;
   }
 }

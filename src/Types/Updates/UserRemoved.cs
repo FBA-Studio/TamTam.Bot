@@ -1,10 +1,11 @@
 using System;
 
 namespace TamTam.Bot.Types.Updates {
-    public class MessageRemoved {
+    public class UserRemoved {
         public DateTime TimeStamp;
-        public string MessageId;
         public long ChatId;
-        public long UserId;
+        public User User;
+        public long AdminId;
+        public bool IsChannel;
     }
 }
