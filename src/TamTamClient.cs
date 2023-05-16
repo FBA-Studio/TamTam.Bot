@@ -75,6 +75,9 @@ namespace TamTam.Bot
                 case UpdateType.MessageEdited:
                     update.MessageEdited = new MessageEdited() { TimeStamp = raw.TimeStamp, Message = raw.Message };
                     break;
+                case UpdateType.UserRemoved:
+                    update.UserRemoved = new UserRemoved() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, AdminId = raw.AdminId.Value, IsChannel = raw.IsChannel.Value };
+                    break;
             }
             return update;
         }
