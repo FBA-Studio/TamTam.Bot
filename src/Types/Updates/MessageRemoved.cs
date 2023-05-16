@@ -5,6 +5,6 @@ namespace TamTam.Bot.Types.Updates {
         public DateTime TimeStamp;
         public string MessageId;
         public long ChatId;
-        public string UserId;
+        public long UserId;
     }
 }
