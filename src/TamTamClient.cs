@@ -78,6 +78,14 @@ namespace TamTam.Bot
                 case UpdateType.UserRemoved:
                     update.UserRemoved = new UserRemoved() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, AdminId = raw.AdminId.Value, IsChannel = raw.IsChannel.Value };
                     break;
+                case UpdateType.BotStarted:
+                    update.BotStarted = new BotStarted() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, Payload = raw.Payload, UserLocale = raw.UserLocale };
+                    break;
+                case UpdateType.ChatTitleChanged:
+                    update.ChatTitleChanged = new ChatTitleChanged() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, };
+                    break;
+                case UpdateType.MessageConstructionRequest:
+                    break;
             }
             return update;
         }
