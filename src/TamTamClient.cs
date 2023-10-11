@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -189,6 +190,33 @@ namespace TamTam.Bot
         }
         public async Task<RequestStatus> LeaveChatAsync(long chatId) {
             return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("DELETE", $"chats/{chatId}/members/me"));
+        }
+        public async Task<ChatMembers> GetChatAdminsAsync(long chatId)
+        {
+            return JsonConvert.DeserializeObject<ChatMembers>(
+                await MakeRequest("GET", $"chats/{chatId}/members/admins"));
+        }
+        public async Task<ChatMembers> GetChatMembersAsync(long chatId, IEnumerable<long>? userIds = null,
+            long? marker = null, int? count = null) {
+            var args = new Dictionary<string, dynamic>();
+            if(userIds != null)
+                args.Add("user_ids", userIds);
+            if (marker != null)
+                args.Add("marker", marker);
+            if (count != null)
+                args.Add("count", count);
+
+            return JsonConvert.DeserializeObject<ChatMembers>(await MakeRequest("GET", $"chats/{chatId}/members", args));
+        }
+        public async Task<RequestStatus> AddMembersAsync(long chatId, IEnumerable<long> userIds) {
+            var args = new Dictionary<string, dynamic>() { {"user_ids", userIds} };
+            return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("POST", $"chats/{chatId}/members", args));
+        }
+        public async Task<RequestStatus> RemoveMemberAsync(long chatId, long userId, bool? block = null) {
+            var args = new Dictionary<string, dynamic>() { {"user_ids", userId} };
+            if (block != null)
+                args.Add("block", block);
+            return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("DELETE", $"chats/{chatId}/members", args));
         }
     }
 }
