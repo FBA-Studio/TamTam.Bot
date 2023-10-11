@@ -7,7 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.IO;
-
+using System.Linq;
 using TamTam.Bot.Types;
 using TamTam.Bot.Types.Enums;
 using TamTam.Bot.Types.Updates;
@@ -90,33 +90,17 @@ namespace TamTam.Bot
             }
             return update;
         }
-
-        private async Task<ReceivedUpdates> GetUpdates() {
-            try {
-                var response = api_url + "/" + "updates" + "?" + Token + "&limit=" + Limit + "&timeout=" + Timeout;
-                if(Marker > 0) {
-                    response += "&marker=" + Marker;
-                }
-                HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(response);
-                httpWebRequest.Method ="GET";
-                httpWebRequest.ContentType = header;
-
-                using(HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse()) {
-                    using Stream stream = httpWebResponse.GetResponseStream();
-                    using StreamReader streamReader = new StreamReader(stream);
-                    return (JArray.Parse(await streamReader.ReadToEndAsync())).ToObject<ReceivedUpdates>();
-                }
-            }
-            catch(Exception exc) {
-                return null;
-            }
-        }
-        private async Task<string> MakeRequest(string method, string urlMethod, Dictionary<string, dynamic> args = null) {
+        private async Task<string> MakeRequest(string method, string urlMethod, Dictionary<string, dynamic> args = null, Dictionary<string, string> additionalParams = null) {
             try {
                 var response = api_url + "/" + urlMethod + "?" + Token;
                 HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(response);
                 httpWebRequest.Method = method;
                 httpWebRequest.ContentType = header;
+                
+                if (additionalParams != null)
+                    for (int i = 0; i < additionalParams.Count; i++)
+                        response += "&" + additionalParams.Keys.ToArray()[i] + "=" +
+                                    additionalParams.Values.ToArray()[i];
                 
                 if(args != null) {
                     var jsonData = JsonConvert.SerializeObject(args);
@@ -132,6 +116,39 @@ namespace TamTam.Bot
                     using Stream stream = httpWebResponse.GetResponseStream();
                     using StreamReader streamReader = new StreamReader(stream);
                     return await streamReader.ReadToEndAsync();
+                }
+            }
+            catch(Exception exc) {
+                return null;
+            }
+        }
+
+        private async Task<string> UploadFile(string url, AttachmentFile attachment) {
+            using (HttpClient client = new HttpClient()) {
+                using (MultipartFormDataContent formData = new MultipartFormDataContent()) {
+                    FileStream fileStream = File.OpenRead(attachment.Path);
+                    formData.Add(new StreamContent(fileStream), attachment.Type.ToString().ToLower(), fileStream.Name);
+
+                    HttpResponseMessage httpResponse = await client.PostAsync(url, formData);
+                    string response = await httpResponse.Content.ReadAsStringAsync();
+                    return (string)JObject.Parse(response)["token"];
+                }
+            }
+        }
+        public async Task<ReceivedUpdates> GetUpdates() {
+            try {
+                var response = api_url + "/" + "updates" + "?" + Token + "&limit=" + Limit + "&timeout=" + Timeout;
+                if(Marker > 0) {
+                    response += "&marker=" + Marker;
+                }
+                HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(response);
+                httpWebRequest.Method ="GET";
+                httpWebRequest.ContentType = header;
+
+                using(HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse()) {
+                    using Stream stream = httpWebResponse.GetResponseStream();
+                    using StreamReader streamReader = new StreamReader(stream);
+                    return (JArray.Parse(await streamReader.ReadToEndAsync())).ToObject<ReceivedUpdates>();
                 }
             }
             catch(Exception exc) {
@@ -217,6 +234,91 @@ namespace TamTam.Bot
             if (block != null)
                 args.Add("block", block);
             return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("DELETE", $"chats/{chatId}/members", args));
+        }
+
+        public async Task<Message[]> GetMessagesAsync(long? chatId = null, IEnumerable<string> messageIds = null,
+            DateTime? from = null, DateTime? to = null, int? count = null) {
+            var args = new Dictionary<string, dynamic>();
+
+            if (chatId != null) 
+                args.Add("chat_id", chatId);
+            if (messageIds != null)
+                args.Add("message_ids", messageIds);
+            if (from != null)
+                args.Add("from", ((DateTimeOffset)from).ToUnixTimeSeconds());
+            if (to != null)
+                args.Add("to", ((DateTimeOffset)to).ToUnixTimeSeconds());
+            if (count != null)
+                args.Add("count", count);
+
+            return JsonConvert.DeserializeObject<Message[]>(await MakeRequest("GET", "messages", args));
+        }
+
+        public async Task<Message> SendMessageAsync(long chatId, bool isChat, SendMessageParams sendParams,
+            bool disableLinkPreview = true)
+        {
+            var urlArgs = new Dictionary<string, string>() { {"disable_link_preview", disableLinkPreview.ToString()} };
+            urlArgs.Add(isChat ? "chat_id" : "user_id", chatId.ToString());
+
+            var args = sendParams.ToPostData();
+            if (sendParams.Attachments != null) {
+                var attachments = new List<Attachment>();
+                foreach (var attachment in sendParams.Attachments) {
+                    switch (attachment.Type) {
+                        case AttachmentType.Audio: {
+                            var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                new Dictionary<string, string>() { { "type", "audio" } });
+                            attachments.Add(new Attachment()
+                            {
+                                Type = attachment.Type,
+                                Payload = new Payload() {
+                                    Token = await UploadFile(serverUpload, attachment)
+                                }
+                            });
+                            break;
+                        }
+                        case AttachmentType.File: {
+                            var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                new Dictionary<string, string>() { { "type", "file" } });
+                            attachments.Add(new Attachment()
+                            {
+                                Type = attachment.Type,
+                                Payload = new Payload() {
+                                    Token = await UploadFile(serverUpload, attachment)
+                                }
+                            });
+                            break;
+                        }
+                        case AttachmentType.Video: {
+                            var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                new Dictionary<string, string>() { { "type", "video" } });
+                            attachments.Add(new Attachment()
+                            {
+                                Type = attachment.Type,
+                                Payload = new Payload() {
+                                    Token = await UploadFile(serverUpload, attachment)
+                                }
+                            });
+                            break;
+                        }
+                        case AttachmentType.Image: {
+                            var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                new Dictionary<string, string>() { { "type", "image" } });
+                            attachments.Add(new Attachment()
+                            {
+                                Type = attachment.Type,
+                                Payload = new Payload() {
+                                    Token = await UploadFile(serverUpload, attachment)
+                                }
+                            });
+                            break;
+                        }
+                    }
+                }
+                args.Add("attachmnets", attachments);
+            }
+
+            return JsonConvert.DeserializeObject<Message>(await MakeRequest("POST", "messages", args, urlArgs));
         }
     }
 }
