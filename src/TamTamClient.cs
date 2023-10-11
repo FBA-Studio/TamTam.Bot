@@ -154,7 +154,7 @@ namespace TamTam.Bot
             var response = await MakeRequest("GET", $"chats/{chatId}");
             return JObject.Parse(response).ToObject<Chat>();
         }
-        public async Task<Chat> EditChatInfoAsync(long chatId, Icon? icon = null, string? title = null, string? pin = null,
+        public async Task<Chat?> EditChatInfoAsync(long chatId, Icon? icon = null, string? title = null, string? pin = null,
             bool? notify = null) {
             Dictionary<string, dynamic> args = new Dictionary<string, dynamic>();
             if (icon != null)
@@ -172,11 +172,23 @@ namespace TamTam.Bot
             var args = new Dictionary<string, dynamic>() { { "action", action } };
             return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("POST", $"chats/{chatId}/actions", args));
         }
+        public async Task<Message> GetPinnedMessageAsync(long chatId) {
+            return JsonConvert.DeserializeObject<Message>(await MakeRequest("GET", $"chats/{chatId}/pin"));
+        }
         public async Task<RequestStatus> PinMessageAsync(long chatId, string messageId, bool? notify = null) {
             var args = new Dictionary<string, dynamic>() { {"message_id", messageId} };
             if (notify != null)
                 args.Add("notify", notify);
             return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("PUT", $"chats/{chatId}/pin", args));
+        }
+        public async Task<RequestStatus> UnpinMessageAsync(long chatId) {
+            return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("DELETE", $"chats/{chatId}/pin"));
+        }
+        public async Task<User> GetChatMembershipAsync(long chatId) {
+            return JsonConvert.DeserializeObject<User>(await MakeRequest("GET", $"chats/{chatId}/members/me"));
+        }
+        public async Task<RequestStatus> LeaveChatAsync(long chatId) {
+            return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("DELETE", $"chats/{chatId}/members/me"));
         }
     }
 }
