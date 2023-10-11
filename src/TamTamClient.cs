@@ -110,18 +110,24 @@ namespace TamTam.Bot
                 return null;
             }
         }
-        private async Task<string> MakeRequest(string method, string urlMethod, Dictionary<string, string> args) {
+        private async Task<string> MakeRequest(string method, string urlMethod, Dictionary<string, dynamic> args = null) {
             try {
                 var response = api_url + "/" + urlMethod + "?" + Token;
                 HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(response);
                 httpWebRequest.Method = method;
                 httpWebRequest.ContentType = header;
+                
+                if(args != null) {
+                    var jsonData = JsonConvert.SerializeObject(args);
+                    httpWebRequest.ContentLength = jsonData.Length;
 
-                if(args.Count > 0) {
-
+                    using (StreamWriter writer = new StreamWriter(await httpWebRequest.GetRequestStreamAsync())) {
+                        await writer.WriteAsync(jsonData);
+                        await writer.FlushAsync();
+                    }
                 }
 
-                using(HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse()) {
+                using (HttpWebResponse httpWebResponse = (HttpWebResponse)await httpWebRequest.GetResponseAsync()) {
                     using Stream stream = httpWebResponse.GetResponseStream();
                     using StreamReader streamReader = new StreamReader(stream);
                     return await streamReader.ReadToEndAsync();
@@ -131,9 +137,46 @@ namespace TamTam.Bot
                 return null;
             }
         }
+        
         public async Task<User> GetMeAsync() {
-            var response = await MakeRequest("GET", "me", new Dictionary<string, string>());
+            var response = await MakeRequest("GET", "me");
             return JObject.Parse(response).ToObject<User>();
+        }
+        public async Task<ChatsList> GetChatsAsync(int count = 50, long? marker = null) {
+            var response = await MakeRequest("GET", "chats");
+            return JObject.Parse(response).ToObject<ChatsList>();
+        }
+        public async Task<Chat> GetChatByLinkAsync(string chatLink) {
+            var response = await MakeRequest("GET", $"chats/{chatLink}");
+            return JObject.Parse(response).ToObject<Chat>();
+        }
+        public async Task<Chat> GetChatAsync(long chatId) {
+            var response = await MakeRequest("GET", $"chats/{chatId}");
+            return JObject.Parse(response).ToObject<Chat>();
+        }
+        public async Task<Chat> EditChatInfoAsync(long chatId, Icon? icon = null, string? title = null, string? pin = null,
+            bool? notify = null) {
+            Dictionary<string, dynamic> args = new Dictionary<string, dynamic>();
+            if (icon != null)
+                args.Add("icon", icon);
+            if (!string.IsNullOrEmpty(title))
+                args.Add("title", title);
+            if (!string.IsNullOrEmpty(pin))
+                args.Add("pin", pin);
+            if (notify != null)
+                args.Add("notify", notify);
+
+            return args.Count > 0 ? JsonConvert.DeserializeObject<Chat>(await MakeRequest("PATCH", $"chats/{chatId}", args)) : null;
+        }
+        public async Task<RequestStatus> SendActionAsync(long chatId, ActionType action) {
+            var args = new Dictionary<string, dynamic>() { { "action", action } };
+            return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("POST", $"chats/{chatId}/actions", args));
+        }
+        public async Task<RequestStatus> PinMessageAsync(long chatId, string messageId, bool? notify = null) {
+            var args = new Dictionary<string, dynamic>() { {"message_id", messageId} };
+            if (notify != null)
+                args.Add("notify", notify);
+            return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("PUT", $"chats/{chatId}/pin", args));
         }
     }
 }
