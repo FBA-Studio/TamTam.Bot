@@ -475,7 +475,76 @@ namespace TamTam.Bot
             
             return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("POST", "answers", args, urlArgs));
         }
-        
-        
+
+        public async Task<RequestStatus> ConstructMessageAsync(string sessionId, ConstructMessageParams constructParams) {
+            var urlArgs = new Dictionary<string, string>() { {"session_id", sessionId} };
+
+            var args = constructParams.ToPostData();
+            if (constructParams.Messages != null) {
+                var attachments = new List<Attachment>();
+                foreach (var message in constructParams.Messages)
+                {
+                    if (message.Attachments != null)
+                        attachments = (List<Attachment>)message.Attachments;
+                    if (message.Files != null)
+                        foreach (var attachment in message.Files) {
+                            switch (attachment.Type) {
+                                case AttachmentType.Audio: {
+                                    var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                        new Dictionary<string, string>() { { "type", "audio" } });
+                                    attachments.Add(new Attachment()
+                                    {
+                                        Type = attachment.Type,
+                                        Payload = new Payload() {
+                                            Token = await UploadFile(serverUpload, attachment)
+                                        }
+                                    });
+                                    break;
+                                }
+                                case AttachmentType.File: {
+                                    var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                        new Dictionary<string, string>() { { "type", "file" } });
+                                    attachments.Add(new Attachment()
+                                    {
+                                        Type = attachment.Type,
+                                        Payload = new Payload() {
+                                            Token = await UploadFile(serverUpload, attachment)
+                                        }
+                                    });
+                                    break;
+                                }
+                                case AttachmentType.Video: {
+                                    var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                        new Dictionary<string, string>() { { "type", "video" } });
+                                    attachments.Add(new Attachment()
+                                    {
+                                        Type = attachment.Type,
+                                        Payload = new Payload() {
+                                            Token = await UploadFile(serverUpload, attachment)
+                                        }
+                                    });
+                                    break;
+                                }
+                                case AttachmentType.Image: {
+                                    var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                        new Dictionary<string, string>() { { "type", "image" } });
+                                    attachments.Add(new Attachment()
+                                    {
+                                        Type = attachment.Type,
+                                        Payload = new Payload() {
+                                            Token = await UploadFile(serverUpload, attachment)
+                                        }
+                                    });
+                                    break;
+                                }
+                            }
+                        }
+                }
+
+                args.Add("attachments", attachments);
+            }
+
+            return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("POST", "answers/constructor", args, urlArgs));
+        }
     }
 }
