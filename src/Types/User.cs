@@ -6,24 +6,24 @@ using TamTam.Bot.Types.Enums;
 namespace TamTam.Bot.Types
 {
     public class User {
-        public long UserId;
-        public string Name;
-        public string? Username;
-        public bool IsBot;
+        public long UserId { get; set; }
+        public string Name { get; set; }
+        public string? Username { get; set; }
+        public bool IsBot { get; set; }
 
-        [JsonConverter(typeof(UnixDateTimeConverter))]
-        public DateTime LastActivityTime;
+        [JsonConverter(typeof(MillisecondEpochConverter))]
+        public DateTime LastActivityTime { get; set; }
 
-        public string? Description;
-        public string? AvatarUrl;
-        public string? FullAvatarUrl;
-        public bool IsOwner;
-        public bool IsAdmin;
+        public string? Description { get; set; }
+        public string? AvatarUrl { get; set; }
+        public string? FullAvatarUrl { get; set; }
+        public bool IsOwner { get; set; }
+        public bool IsAdmin { get; set; }
         
-        [JsonConverter(typeof(UnixDateTimeConverter))]
-        public DateTime JoinTime;
+        [JsonConverter(typeof(MillisecondEpochConverter))]
+        public DateTime JoinTime { get; set; }
 
-        public Permissions Permissions;
-        public BotCommand[] Commands;
+        public Permissions Permissions { get; set; }
+        public BotCommand[] Commands { get; set; }
     }
 }

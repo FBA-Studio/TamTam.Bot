@@ -4,10 +4,11 @@ using Newtonsoft.Json.Converters;
 
 namespace TamTam.Bot.Types {
     public class Callback {
-        [JsonConverter(typeof(UnixDateTimeConverter))]
-        public DateTime TimeStamp;
-        public string CallbackId;
-        public string Payload;
-        public User User;
+        [JsonConverter(typeof(MillisecondEpochConverter))]
+        public DateTime TimeStamp { get; set; }
+        
+        public string CallbackId { get; set; }
+        public string Payload { get; set; }
+        public User User { get; set; }
     }
 }

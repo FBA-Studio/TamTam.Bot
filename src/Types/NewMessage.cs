@@ -6,7 +6,7 @@ namespace TamTam.Bot.Types {
         public string? Text;
         public Attachment[]? Attachments;
         public Link? Link;
-        public bool Notify;
-        public Format Format;
+        public bool? Notify;
+        public Format? Format;
     }
 }

@@ -19,31 +19,33 @@ namespace TamTam.Bot
         private static readonly string api_url = "https://botapi.tamtam.chat";
         private static string Token = "access_token=token";
         private static int Limit = 100;
-        private static int Timeout = 30;
-        private static long Marker = 0;
+        private static int Timeout = 30000;
+        private static long? Marker = null;
 
         public TamTamClient(string token, int limit = 100, int timeout = 30) {
             Token = "access_token=" + token;
             Limit = limit;
-            Timeout = timeout;
-            Marker = 0;
+            Timeout = timeout * 1000;
+            Marker = null;
         }
 
         public async void StartPolling(Func<Update, Task> updateHandler, UpdateType[] allowedUpdates = null) {
             while(true) {
-                var updates = await GetUpdates();
-                Marker = Math.Max(Marker, updates.Marker);
-                foreach (var update in updates.Updates) {
-                    if(allowedUpdates == null) {
-                        var upd = ParseRawUpdate(update);
-                        await updateHandler.Invoke(upd);
-                    }
-                    else {
-                        foreach(var allwUpdate in allowedUpdates) {
-                            if(allwUpdate == update.UpdateType) {
-                                var upd = ParseRawUpdate(update);
-                                await updateHandler.Invoke(upd);
-                                break;
+                var updates = await GetUpdates(Marker);
+                if (updates != null) {
+                    Marker = Marker == null ? 0 : Marker;
+                    Marker = Math.Max(Marker.Value, updates.Marker);
+                    foreach (var update in updates.Updates) {
+                        if(allowedUpdates == null) {
+                            var upd = ParseRawUpdate(update);
+                            await updateHandler.Invoke(upd);
+                        }
+                        else {
+                            foreach(var allwUpdate in allowedUpdates) {
+                                if(allwUpdate == update.UpdateType) {
+                                    var upd = ParseRawUpdate(update);
+                                    await updateHandler.Invoke(upd);
+                                }
                             }
                         }
                     }
@@ -135,20 +137,22 @@ namespace TamTam.Bot
                 }
             }
         }
-        public async Task<ReceivedUpdates> GetUpdates() {
+        public async Task<ReceivedUpdates> GetUpdates(long? marker = null) {
             try {
                 var response = api_url + "/" + "updates" + "?" + Token + "&limit=" + Limit + "&timeout=" + Timeout;
-                if(Marker > 0) {
-                    response += "&marker=" + Marker;
+                if(marker != null && marker > 0) {
+                    response += "&marker=" + marker;
                 }
                 HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(response);
                 httpWebRequest.Method ="GET";
                 httpWebRequest.ContentType = header;
+                httpWebRequest.Timeout = Timeout;
+                httpWebRequest.ReadWriteTimeout = Timeout;
 
                 using(HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse()) {
                     using Stream stream = httpWebResponse.GetResponseStream();
                     using StreamReader streamReader = new StreamReader(stream);
-                    return (JArray.Parse(await streamReader.ReadToEndAsync())).ToObject<ReceivedUpdates>();
+                    return JsonConvert.DeserializeObject<ReceivedUpdates>(await streamReader.ReadToEndAsync());
                 }
             }
             catch(Exception exc) {
@@ -261,64 +265,217 @@ namespace TamTam.Bot
             urlArgs.Add(isChat ? "chat_id" : "user_id", chatId.ToString());
 
             var args = sendParams.ToPostData();
-            if (sendParams.Attachments != null) {
+            if (sendParams.Attachments != null || sendParams.Files != null) {
                 var attachments = new List<Attachment>();
-                foreach (var attachment in sendParams.Attachments) {
-                    switch (attachment.Type) {
-                        case AttachmentType.Audio: {
-                            var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
-                                new Dictionary<string, string>() { { "type", "audio" } });
-                            attachments.Add(new Attachment()
-                            {
-                                Type = attachment.Type,
-                                Payload = new Payload() {
-                                    Token = await UploadFile(serverUpload, attachment)
-                                }
-                            });
-                            break;
-                        }
-                        case AttachmentType.File: {
-                            var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
-                                new Dictionary<string, string>() { { "type", "file" } });
-                            attachments.Add(new Attachment()
-                            {
-                                Type = attachment.Type,
-                                Payload = new Payload() {
-                                    Token = await UploadFile(serverUpload, attachment)
-                                }
-                            });
-                            break;
-                        }
-                        case AttachmentType.Video: {
-                            var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
-                                new Dictionary<string, string>() { { "type", "video" } });
-                            attachments.Add(new Attachment()
-                            {
-                                Type = attachment.Type,
-                                Payload = new Payload() {
-                                    Token = await UploadFile(serverUpload, attachment)
-                                }
-                            });
-                            break;
-                        }
-                        case AttachmentType.Image: {
-                            var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
-                                new Dictionary<string, string>() { { "type", "image" } });
-                            attachments.Add(new Attachment()
-                            {
-                                Type = attachment.Type,
-                                Payload = new Payload() {
-                                    Token = await UploadFile(serverUpload, attachment)
-                                }
-                            });
-                            break;
+                if (sendParams.Attachments != null)
+                    attachments = (List<Attachment>)sendParams.Attachments;
+                if (sendParams.Files != null)
+                    foreach (var attachment in sendParams.Files) {
+                        switch (attachment.Type) {
+                            case AttachmentType.Audio: {
+                                var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                    new Dictionary<string, string>() { { "type", "audio" } });
+                                attachments.Add(new Attachment()
+                                {
+                                    Type = attachment.Type,
+                                    Payload = new Payload() {
+                                        Token = await UploadFile(serverUpload, attachment)
+                                    }
+                                });
+                                break;
+                            }
+                            case AttachmentType.File: {
+                                var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                    new Dictionary<string, string>() { { "type", "file" } });
+                                attachments.Add(new Attachment()
+                                {
+                                    Type = attachment.Type,
+                                    Payload = new Payload() {
+                                        Token = await UploadFile(serverUpload, attachment)
+                                    }
+                                });
+                                break;
+                            }
+                            case AttachmentType.Video: {
+                                var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                    new Dictionary<string, string>() { { "type", "video" } });
+                                attachments.Add(new Attachment()
+                                {
+                                    Type = attachment.Type,
+                                    Payload = new Payload() {
+                                        Token = await UploadFile(serverUpload, attachment)
+                                    }
+                                });
+                                break;
+                            }
+                            case AttachmentType.Image: {
+                                var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                    new Dictionary<string, string>() { { "type", "image" } });
+                                attachments.Add(new Attachment()
+                                {
+                                    Type = attachment.Type,
+                                    Payload = new Payload() {
+                                        Token = await UploadFile(serverUpload, attachment)
+                                    }
+                                });
+                                break;
+                            }
                         }
                     }
-                }
-                args.Add("attachmnets", attachments);
+                args.Add("attachments", attachments);
             }
 
             return JsonConvert.DeserializeObject<Message>(await MakeRequest("POST", "messages", args, urlArgs));
         }
+        public async Task<RequestStatus> EditMessageAsync(string messageId, EditMessageParams editParams) {
+            var urlArgs = new Dictionary<string, string>() { {"message_id", messageId} };
+
+            var args = editParams.ToPostData();
+            if (editParams.Attachments != null) {
+                var attachments = new List<Attachment>();
+                if (editParams.Attachments != null)
+                    attachments = (List<Attachment>)editParams.Attachments;
+                if (editParams.Files != null)
+                    foreach (var attachment in editParams.Files) {
+                        switch (attachment.Type) {
+                            case AttachmentType.Audio: {
+                                var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                    new Dictionary<string, string>() { { "type", "audio" } });
+                                attachments.Add(new Attachment()
+                                {
+                                    Type = attachment.Type,
+                                    Payload = new Payload() {
+                                        Token = await UploadFile(serverUpload, attachment)
+                                    }
+                                });
+                                break;
+                            }
+                            case AttachmentType.File: {
+                                var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                    new Dictionary<string, string>() { { "type", "file" } });
+                                attachments.Add(new Attachment()
+                                {
+                                    Type = attachment.Type,
+                                    Payload = new Payload() {
+                                        Token = await UploadFile(serverUpload, attachment)
+                                    }
+                                });
+                                break;
+                            }
+                            case AttachmentType.Video: {
+                                var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                    new Dictionary<string, string>() { { "type", "video" } });
+                                attachments.Add(new Attachment()
+                                {
+                                    Type = attachment.Type,
+                                    Payload = new Payload() {
+                                        Token = await UploadFile(serverUpload, attachment)
+                                    }
+                                });
+                                break;
+                            }
+                            case AttachmentType.Image: {
+                                var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                    new Dictionary<string, string>() { { "type", "image" } });
+                                attachments.Add(new Attachment()
+                                {
+                                    Type = attachment.Type,
+                                    Payload = new Payload() {
+                                        Token = await UploadFile(serverUpload, attachment)
+                                    }
+                                });
+                                break;
+                            }
+                        }
+                    }
+                args.Add("attachments", attachments);
+            }
+
+            return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("PUT", "messages", args, urlArgs));
+        }
+        public async Task<RequestStatus> DeleteMessageAsync(string messageId) {
+            var urlArgs = new Dictionary<string, string>() { {"message_id", messageId} };
+
+            return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("PUT", "messages", additionalParams: urlArgs));
+        }
+        
+        public async Task<Message> GetMessageAsync(string messageId) {
+            return JsonConvert.DeserializeObject<Message>(await MakeRequest("GET", "messages/" + messageId));
+        }
+
+        public async Task<RequestStatus> AnswerOnCallbackAsync(string callback_id, CallbackAnswerParams answerParams,
+            bool? notification = null) {
+            var urlArgs = new Dictionary<string, string>() { {"callback_id", callback_id} };
+
+            var args = new Dictionary<string, dynamic>();
+            
+            if (answerParams.Attachments != null || answerParams.Files != null) {
+                var attachments = new List<Attachment>();
+                if (answerParams.Attachments != null)
+                    attachments = (List<Attachment>)answerParams.Attachments;
+                if (answerParams.Files != null)
+                    foreach (var attachment in answerParams.Files) {
+                        switch (attachment.Type) {
+                            case AttachmentType.Audio: {
+                                var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                    new Dictionary<string, string>() { { "type", "audio" } });
+                                attachments.Add(new Attachment()
+                                {
+                                    Type = attachment.Type,
+                                    Payload = new Payload() {
+                                        Token = await UploadFile(serverUpload, attachment)
+                                    }
+                                });
+                                break;
+                            }
+                            case AttachmentType.File: {
+                                var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                    new Dictionary<string, string>() { { "type", "file" } });
+                                attachments.Add(new Attachment()
+                                {
+                                    Type = attachment.Type,
+                                    Payload = new Payload() {
+                                        Token = await UploadFile(serverUpload, attachment)
+                                    }
+                                });
+                                break;
+                            }
+                            case AttachmentType.Video: {
+                                var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                    new Dictionary<string, string>() { { "type", "video" } });
+                                attachments.Add(new Attachment()
+                                {
+                                    Type = attachment.Type,
+                                    Payload = new Payload() {
+                                        Token = await UploadFile(serverUpload, attachment)
+                                    }
+                                });
+                                break;
+                            }
+                            case AttachmentType.Image: {
+                                var serverUpload = await MakeRequest("GET", "uploads", additionalParams:
+                                    new Dictionary<string, string>() { { "type", "image" } });
+                                attachments.Add(new Attachment()
+                                {
+                                    Type = attachment.Type,
+                                    Payload = new Payload() {
+                                        Token = await UploadFile(serverUpload, attachment)
+                                    }
+                                });
+                                break;
+                            }
+                        }
+                    }
+
+                var message = new NewMessage() { Text = answerParams.Text, Attachments = attachments.ToArray(), 
+                    Format = answerParams.Format, Notify = answerParams.Notify};
+                args.Add("message", message);
+                args.Add("notification", notification);
+            }
+            
+            return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("POST", "answers", args, urlArgs));
+        }
+        
+        
     }
 }

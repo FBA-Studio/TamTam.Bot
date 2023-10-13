@@ -4,10 +4,10 @@ namespace TamTam.Bot.Types
 {
     public class MessageBody
     {
-        public string Mid;
-        public long Seq;
-        public string? Text;
-        public Attachment[]? Attachments;
-        public Markup[]? Markup;
+        public string Mid { get; set; }
+        public long Seq { get; set; }
+        public string? Text { get; set; }
+        public Attachment[]? Attachments { get; set; }
+        public Markup[]? Markup { get; set; }
     }
 }
