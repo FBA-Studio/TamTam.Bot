@@ -3,11 +3,31 @@ using TamTam.Bot.Types.Enums;
 
 namespace TamTam.Bot.Types {
     public class SendMessageParams {
+        /// <summary>
+        /// Text/caption for your message
+        /// </summary>
         public string? Text;
+        
+        /// <summary>
+        /// Your array of files/medias(File, Video, Audio, Image)
+        /// </summary>
         public IEnumerable<AttachmentFile>? Files;
+        
+        /// <summary>
+        /// Your array of other attachments(Sticker, Location, Contact, etc.)
+        /// </summary>
         public IEnumerable<Attachment>? Attachments;
+        
         public Link? Link;
+        
+        /// <summary>
+        /// <b>true</b>, if you want notify after sending
+        /// </summary>
         public bool Notify;
+        
+        /// <summary>
+        /// Text format(Markdown, HTML)
+        /// </summary>
         public Format? Format;
 
         public SendMessageParams() {

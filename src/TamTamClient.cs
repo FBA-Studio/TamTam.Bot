@@ -21,14 +21,27 @@ namespace TamTam.Bot
         private static int Limit = 100;
         private static int Timeout = 30000;
         private static long? Marker = null;
-
+        
+        /// <summary>
+        /// <b>Welcome to TamTam.Bot!</b>
+        /// <code/> FAQ - https://github.com/FBA-Studio/TamTam.Bot/blob/main/FAQ.md 
+        /// <code/> README - https://github.com/FBA-Studio/TamTam.Bot/tree/main#readme
+        /// <code/> README-EN - https://github.com/FBA-Studio/TamTam.Bot/blob/main/README_EN.md
+        /// </summary>
+        /// <param name="token">Your bot token</param>
+        /// <param name="limit">Limit for received updates. <code>Default: 100</code></param>
+        /// <param name="timeout">Timeout in seconds for update receiving. <code>Default: 30</code></param>
         public TamTamClient(string token, int limit = 100, int timeout = 30) {
             Token = "access_token=" + token;
             Limit = limit;
             Timeout = timeout * 1000;
             Marker = null;
         }
-
+        /// <summary>
+        /// Update Receiver Handler.
+        /// </summary>
+        /// <param name="updateHandler">Your function for update receiving, e.x. <code>static Task UpdateReceiver(TamTam.Bot.Types.Update update)</code></param>
+        /// <param name="allowedUpdates">Your array of allowed updates. If <b>allowedUpdates</b> is null, you will receiving all update types. <code>Default: null</code></param>
         public async void StartPolling(Func<Update, Task> updateHandler, UpdateType[] allowedUpdates = null) {
             while(true) {
                 var updates = await GetUpdates(Marker);
@@ -137,6 +150,12 @@ namespace TamTam.Bot
                 }
             }
         }
+        
+        /// <summary>
+        /// Get Updates without handler. <code>⚠️For advanced developers</code>
+        /// </summary>
+        /// <param name="marker">Marker for receiving next updates. If you haven't marker - keep it null</param>
+        /// <returns>Array of updates in object <see cref="ReceivedUpdates"/></returns>
         public async Task<ReceivedUpdates> GetUpdates(long? marker = null) {
             try {
                 var response = api_url + "/" + "updates" + "?" + Token + "&limit=" + Limit + "&timeout=" + Timeout;
@@ -160,22 +179,55 @@ namespace TamTam.Bot
             }
         }
         
+        /// <summary>
+        /// Get info about bot
+        /// </summary>
+        /// <returns>Bot info in object <see cref="User"/></returns>
         public async Task<User> GetMeAsync() {
             var response = await MakeRequest("GET", "me");
             return JObject.Parse(response).ToObject<User>();
         }
+        
+        /// <summary>
+        /// Get list of dialogs/chats with your bot
+        /// </summary>
+        /// <param name="count">Max dialogs/chats returning. <code>Default: 50</code></param>
+        /// <param name="marker">Page of dialogs/chats. <code>Default: null</code></param>
+        /// <returns>Array of chats in object <see cref="ChatsList"/></returns>
         public async Task<ChatsList> GetChatsAsync(int count = 50, long? marker = null) {
             var response = await MakeRequest("GET", "chats");
             return JObject.Parse(response).ToObject<ChatsList>();
         }
+        
+        /// <summary>
+        /// Get chat info by chat's link
+        /// </summary>
+        /// <param name="chatLink">Link of chat</param>
+        /// <returns>Chat info in <see cref="Chat"/></returns>
         public async Task<Chat> GetChatByLinkAsync(string chatLink) {
             var response = await MakeRequest("GET", $"chats/{chatLink}");
             return JObject.Parse(response).ToObject<Chat>();
         }
+        
+        /// <summary>
+        /// Get chat info by chat ID
+        /// </summary>
+        /// <param name="chatId">Chat ID</param>
+        /// <returns>Chat info in <see cref="Chat"/></returns>
         public async Task<Chat> GetChatAsync(long chatId) {
             var response = await MakeRequest("GET", $"chats/{chatId}");
             return JObject.Parse(response).ToObject<Chat>();
         }
+        
+        /// <summary>
+        /// Edit chat info
+        /// </summary>
+        /// <param name="chatId">ID of target chat</param>
+        /// <param name="icon">New chat icon. <code>Default: null</code></param>
+        /// <param name="title">New chat title. <code>Default: null</code></param>
+        /// <param name="pin">New pinned message by message ID. <code>Default: null</code></param>
+        /// <param name="notify">Notify about editing. <code>Default: null</code></param>
+        /// <returns>Chat info in <see cref="Chat"/>, if one of optional param not null</returns>
         public async Task<Chat?> EditChatInfoAsync(long chatId, Icon? icon = null, string? title = null, string? pin = null,
             bool? notify = null) {
             Dictionary<string, dynamic> args = new Dictionary<string, dynamic>();
@@ -190,33 +242,87 @@ namespace TamTam.Bot
 
             return args.Count > 0 ? JsonConvert.DeserializeObject<Chat>(await MakeRequest("PATCH", $"chats/{chatId}", args)) : null;
         }
+        
+        /// <summary>
+        /// Send bot action to user or chat
+        /// </summary>
+        /// <param name="chatId">ID of chat</param>
+        /// <param name="action">Action type</param>
+        /// <returns>Request status</returns>
         public async Task<RequestStatus> SendActionAsync(long chatId, ActionType action) {
             var args = new Dictionary<string, dynamic>() { { "action", action } };
             return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("POST", $"chats/{chatId}/actions", args));
         }
+        
+        /// <summary>
+        /// Get pinned message info
+        /// </summary>
+        /// <param name="chatId">ID of chat</param>
+        /// <returns>Message info in <see cref="Message"/></returns>
         public async Task<Message> GetPinnedMessageAsync(long chatId) {
             return JsonConvert.DeserializeObject<Message>(await MakeRequest("GET", $"chats/{chatId}/pin"));
         }
+        
+        /// <summary>
+        /// Pin message in chat/dialog by message ID
+        /// </summary>
+        /// <param name="chatId">ID of chat/dialog</param>
+        /// <param name="messageId">ID of target message</param>
+        /// <param name="notify">Notify about pinned message. <code>Default: null</code></param>
+        /// <returns>Request status</returns>
         public async Task<RequestStatus> PinMessageAsync(long chatId, string messageId, bool? notify = null) {
             var args = new Dictionary<string, dynamic>() { {"message_id", messageId} };
             if (notify != null)
                 args.Add("notify", notify);
             return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("PUT", $"chats/{chatId}/pin", args));
         }
+        
+        /// <summary>
+        /// Unpin message in chat/dialog by message ID
+        /// </summary>
+        /// <param name="chatId">ID of chat/dialog</param>
+        /// <returns>Request status</returns>
         public async Task<RequestStatus> UnpinMessageAsync(long chatId) {
             return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("DELETE", $"chats/{chatId}/pin"));
         }
+        
+        /// <summary>
+        /// Get chat membership for your bot
+        /// </summary>
+        /// <param name="chatId">ID of target chat</param>
+        /// <returns>Bot info in <see cref="User"/></returns>
         public async Task<User> GetChatMembershipAsync(long chatId) {
             return JsonConvert.DeserializeObject<User>(await MakeRequest("GET", $"chats/{chatId}/members/me"));
         }
+        
+        /// <summary>
+        /// Leave from chat by chat ID
+        /// </summary>
+        /// <param name="chatId">ID of target chat</param>
+        /// <returns>Request status</returns>
         public async Task<RequestStatus> LeaveChatAsync(long chatId) {
             return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("DELETE", $"chats/{chatId}/members/me"));
         }
+        
+        /// <summary>
+        /// Get list of chat admins
+        /// </summary>
+        /// <param name="chatId">ID of target chat</param>
+        /// <returns>List of admins in <see cref="ChatMembers"/></returns>
         public async Task<ChatMembers> GetChatAdminsAsync(long chatId)
         {
             return JsonConvert.DeserializeObject<ChatMembers>(
                 await MakeRequest("GET", $"chats/{chatId}/members/admins"));
         }
+        
+        /// <summary>
+        /// Get list of chat members info
+        /// </summary>
+        /// <param name="chatId">ID of target chat</param>
+        /// <param name="userIds">List of user IDs. If array is null, you will get list of chat members by count. <code>Default: null</code></param>
+        /// <param name="marker">Page of chat members. <code>Default: null</code></param>
+        /// <param name="count">Members list's limit. <code>Default: null</code></param>
+        /// <returns>Arrays of chat members in <see cref="ChatMembers"/></returns>
         public async Task<ChatMembers> GetChatMembersAsync(long chatId, IEnumerable<long>? userIds = null,
             long? marker = null, int? count = null) {
             var args = new Dictionary<string, dynamic>();
@@ -229,17 +335,41 @@ namespace TamTam.Bot
 
             return JsonConvert.DeserializeObject<ChatMembers>(await MakeRequest("GET", $"chats/{chatId}/members", args));
         }
+        
+        /// <summary>
+        /// Add member to chat
+        /// </summary>
+        /// <param name="chatId">ID of target chat</param>
+        /// <param name="userIds">Array of user IDs for inviting to chat</param>
+        /// <returns>Request status</returns>
         public async Task<RequestStatus> AddMembersAsync(long chatId, IEnumerable<long> userIds) {
             var args = new Dictionary<string, dynamic>() { {"user_ids", userIds} };
             return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("POST", $"chats/{chatId}/members", args));
         }
+        
+        /// <summary>
+        /// Remove chat member from chat
+        /// </summary>
+        /// <param name="chatId">ID of chat</param>
+        /// <param name="userId">ID of target user</param>
+        /// <param name="block">Block user after removing, if <b>block = true</b>. <code>Default: null</code></param>
+        /// <returns>Request status</returns>
         public async Task<RequestStatus> RemoveMemberAsync(long chatId, long userId, bool? block = null) {
             var args = new Dictionary<string, dynamic>() { {"user_ids", userId} };
             if (block != null)
                 args.Add("block", block);
             return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("DELETE", $"chats/{chatId}/members", args));
         }
-
+        
+        /// <summary>
+        /// Get list of messages
+        /// </summary>
+        /// <param name="chatId">ID of chat</param>
+        /// <param name="messageIds">Array of allowed message IDs. <code>Default: null</code></param>
+        /// <param name="from">[FILTER] Time of sent message. <code>Default: null</code></param>
+        /// <param name="to">[FILTER] Time of sent message. <code>Default: null</code></param>
+        /// <param name="count">Limit for list of messages. <code>Default: null</code></param>
+        /// <returns>Array of <see cref="Message"/></returns>
         public async Task<Message[]> GetMessagesAsync(long? chatId = null, IEnumerable<string> messageIds = null,
             DateTime? from = null, DateTime? to = null, int? count = null) {
             var args = new Dictionary<string, dynamic>();
@@ -249,15 +379,23 @@ namespace TamTam.Bot
             if (messageIds != null)
                 args.Add("message_ids", messageIds);
             if (from != null)
-                args.Add("from", ((DateTimeOffset)from).ToUnixTimeSeconds());
+                args.Add("from", ((DateTimeOffset)from).ToUnixTimeMilliseconds());
             if (to != null)
-                args.Add("to", ((DateTimeOffset)to).ToUnixTimeSeconds());
+                args.Add("to", ((DateTimeOffset)to).ToUnixTimeMilliseconds());
             if (count != null)
                 args.Add("count", count);
 
             return JsonConvert.DeserializeObject<Message[]>(await MakeRequest("GET", "messages", args));
         }
-
+        
+        /// <summary>
+        /// Send message function
+        /// </summary>
+        /// <param name="chatId">ID of target chat/dialog</param>
+        /// <param name="isChat"><b>true</b>, if it's a chat</param>
+        /// <param name="sendParams">Send message params(Attachments, buttons etc.)</param>
+        /// <param name="disableLinkPreview">true, if you want disable link preview in message. <code>Default: true</code></param>
+        /// <returns>Your sent message in <see cref="Message"/></returns>
         public async Task<Message> SendMessageAsync(long chatId, bool isChat, SendMessageParams sendParams,
             bool disableLinkPreview = true)
         {
@@ -327,6 +465,13 @@ namespace TamTam.Bot
 
             return JsonConvert.DeserializeObject<Message>(await MakeRequest("POST", "messages", args, urlArgs));
         }
+        
+        /// <summary>
+        /// Edit message by message ID
+        /// </summary>
+        /// <param name="messageId">ID of target message to edit it</param>
+        /// <param name="editParams">Edit params</param>
+        /// <returns>Request status</returns>
         public async Task<RequestStatus> EditMessageAsync(string messageId, EditMessageParams editParams) {
             var urlArgs = new Dictionary<string, string>() { {"message_id", messageId} };
 
@@ -393,19 +538,37 @@ namespace TamTam.Bot
 
             return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("PUT", "messages", args, urlArgs));
         }
+        
+        /// <summary>
+        /// Delete message by message ID
+        /// </summary>
+        /// <param name="messageId">ID of target message</param>
+        /// <returns>Request status</returns>
         public async Task<RequestStatus> DeleteMessageAsync(string messageId) {
             var urlArgs = new Dictionary<string, string>() { {"message_id", messageId} };
 
             return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("PUT", "messages", additionalParams: urlArgs));
         }
         
+        /// <summary>
+        /// Get message info by message ID
+        /// </summary>
+        /// <param name="messageId">ID of target message</param>
+        /// <returns>Message info in <see cref="Message"/></returns>
         public async Task<Message> GetMessageAsync(string messageId) {
             return JsonConvert.DeserializeObject<Message>(await MakeRequest("GET", "messages/" + messageId));
         }
-
-        public async Task<RequestStatus> AnswerOnCallbackAsync(string callback_id, CallbackAnswerParams answerParams,
+        
+        /// <summary>
+        /// Answer on callback
+        /// </summary>
+        /// <param name="callbackId">ID of callback</param>
+        /// <param name="answerParams">Answer params for callback</param>
+        /// <param name="notification"><b>true</b>, if you want answer as notification. <code>Default: null</code></param>
+        /// <returns>Request status</returns>
+        public async Task<RequestStatus> AnswerOnCallbackAsync(string callbackId, CallbackAnswerParams answerParams,
             bool? notification = null) {
-            var urlArgs = new Dictionary<string, string>() { {"callback_id", callback_id} };
+            var urlArgs = new Dictionary<string, string>() { {"callback_id", callbackId} };
 
             var args = new Dictionary<string, dynamic>();
             
@@ -475,7 +638,13 @@ namespace TamTam.Bot
             
             return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("POST", "answers", args, urlArgs));
         }
-
+        
+        /// <summary>
+        /// Send constructor to user
+        /// </summary>
+        /// <param name="sessionId">ID of session</param>
+        /// <param name="constructParams">Constructor params</param>
+        /// <returns>Request status</returns>
         public async Task<RequestStatus> ConstructMessageAsync(string sessionId, ConstructMessageParams constructParams) {
             var urlArgs = new Dictionary<string, string>() { {"session_id", sessionId} };
 
