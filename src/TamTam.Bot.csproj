@@ -12,7 +12,7 @@
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
-    <DocumentationFile>bin\Release\netstandard2\TamTam.Bot.xml</DocumentationFile>
+    <DocumentationFile>bin\Release\netstandard2.1\TamTam.Bot.xml</DocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
