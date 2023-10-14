@@ -20,7 +20,11 @@ namespace TamTam.Bot.Types{
     public string? UserLocale { get; set; }
     public bool? IsChannel { get; set; }
     public long? InviterId { get; set; }
-
+    public string? SessionId { get; set; }
+    public string? Data { get; set; }
+    public Input? Input { get; set; }
+    public Chat? Chat { get; set; }
+    public string? StartPayload { get; set; }
     public Payload? Payload { get; set; }
     public long? AdminId { get; set; }
     public string? Title { get; set; }

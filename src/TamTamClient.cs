@@ -12,8 +12,7 @@ using TamTam.Bot.Types;
 using TamTam.Bot.Types.Enums;
 using TamTam.Bot.Types.Updates;
 
-namespace TamTam.Bot
-{
+namespace TamTam.Bot {
     public class TamTamClient {
         private static readonly string header = "application/json";
         private static readonly string api_url = "https://botapi.tamtam.chat";
@@ -50,13 +49,13 @@ namespace TamTam.Bot
                     Marker = Math.Max(Marker.Value, updates.Marker);
                     foreach (var update in updates.Updates) {
                         if(allowedUpdates == null) {
-                            var upd = ParseRawUpdate(update);
+                            var upd = ParseRawUpdate(update, updates.JsonRaw);
                             await updateHandler.Invoke(upd);
                         }
                         else {
                             foreach(var allwUpdate in allowedUpdates) {
                                 if(allwUpdate == update.UpdateType) {
-                                    var upd = ParseRawUpdate(update);
+                                    var upd = ParseRawUpdate(update, updates.JsonRaw);
                                     await updateHandler.Invoke(upd);
                                 }
                             }
@@ -66,43 +65,93 @@ namespace TamTam.Bot
             }
         }
 
-        private Update ParseRawUpdate(UpdateRaw raw) {
+        private Update ParseRawUpdate(UpdateRaw raw, string jsonRaw) {
             var update = new Update() { UpdateType = raw.UpdateType };
             switch (raw.UpdateType)
             {
                 case UpdateType.BotAdded:
-                    update.BotAdded = new BotAdded() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, IsChannel = raw.IsChannel.Value };
+                    update.BotAdded = new BotAdded()
+                    {
+                        TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, 
+                        User = raw.User, IsChannel = raw.IsChannel.Value
+                    };
                     break;
                 case UpdateType.UserAdded:
-                    update.UserAdded = new UserAdded() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, InviterId = raw.InviterId.Value, IsChannel = raw.IsChannel.Value };
+                    update.UserAdded = new UserAdded() { 
+                        TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, 
+                        User = raw.User, InviterId = raw.InviterId.Value, IsChannel = raw.IsChannel.Value };
                     break;
                 case UpdateType.BotRemoved:
-                    update.BotRemoved = new BotRemoved() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, IsChannel = raw.IsChannel.Value };
+                    update.BotRemoved = new BotRemoved() { 
+                        TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, 
+                        User = raw.User, IsChannel = raw.IsChannel.Value };
                     break;
                 case UpdateType.MessageCallback:
-                    update.MessageCallback = new MessageCallback() { TimeStamp = raw.TimeStamp, Callback = raw.Callback, Message = raw.Message, UserLocale = raw.UserLocale };
+                    update.MessageCallback = new MessageCallback()
+                    {
+                        TimeStamp = raw.TimeStamp, Callback = raw.Callback, 
+                        Message = raw.Message, UserLocale = raw.UserLocale
+                    };
                     break;
                 case UpdateType.MessageCreated:
-                    update.MessageCreated = new MessageCreated() { TimeStamp = raw.TimeStamp, Message = raw.Message, UserLocale = raw.UserLocale };
+                    update.MessageCreated = new MessageCreated() { 
+                        TimeStamp = raw.TimeStamp, Message = raw.Message, 
+                        UserLocale = raw.UserLocale };
                     break;
                 case UpdateType.MessageRemoved:
-                    update.MessageRemoved = new MessageRemoved() { TimeStamp = raw.TimeStamp, MessageId = raw.MessageId, ChatId = raw.ChatId.Value, UserId = raw.UserId.Value};
+                    update.MessageRemoved = new MessageRemoved()
+                    {
+                        TimeStamp = raw.TimeStamp, MessageId = raw.MessageId, ChatId = raw.ChatId.Value, 
+                        UserId = raw.UserId.Value
+                    };
                     break;
                 case UpdateType.MessageEdited:
-                    update.MessageEdited = new MessageEdited() { TimeStamp = raw.TimeStamp, Message = raw.Message };
+                    update.MessageEdited = new MessageEdited()
+                    {
+                        TimeStamp = raw.TimeStamp, Message = raw.Message
+                    };
                     break;
                 case UpdateType.UserRemoved:
-                    update.UserRemoved = new UserRemoved() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, AdminId = raw.AdminId.Value, IsChannel = raw.IsChannel.Value };
+                    update.UserRemoved = new UserRemoved() { 
+                        TimeStamp = raw.TimeStamp, 
+                        ChatId = raw.ChatId.Value, User = raw.User, AdminId = raw.AdminId.Value, 
+                        IsChannel = raw.IsChannel.Value };
                     break;
                 case UpdateType.BotStarted:
-                    update.BotStarted = new BotStarted() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, Payload = raw.Payload, UserLocale = raw.UserLocale };
+                    update.BotStarted = new BotStarted()
+                    {
+                        TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, User = raw.User, 
+                        Payload = raw.Payload, UserLocale = raw.UserLocale
+                    };
                     break;
                 case UpdateType.ChatTitleChanged:
-                    update.ChatTitleChanged = new ChatTitleChanged() { TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value, };
+                    update.ChatTitleChanged = new ChatTitleChanged()
+                    {
+                        TimeStamp = raw.TimeStamp, ChatId = raw.ChatId.Value,
+                    };
                     break;
                 case UpdateType.MessageConstructionRequest:
+                    update.MessageConstructionRequest = new MessageConstructionRequest()
+                    {
+                        TimeStamp = raw.TimeStamp, User = raw.User, UserLocale = raw.UserLocale, 
+                        SessionId = raw.SessionId, Data = raw.Data, Input = raw.Input
+                    };
+                    break;
+                case UpdateType.MessageConstructed:
+                    update.MessageConstructed = new MessageConstructed()
+                    {
+                        TimeStamp = raw.TimeStamp, Message = raw.Message, SessionId = raw.SessionId
+                    };
+                    break;
+                case UpdateType.MessageChatCreated:
+                    update.MessageChatCreated = new MessageChatCreated()
+                    {
+                        TimeStamp = raw.TimeStamp, Chat = raw.Chat, MessageId = raw.MessageId,
+                        StartPayload = raw.StartPayload
+                    };
                     break;
             }
+            update.JsonRaw = jsonRaw;
             return update;
         }
         private async Task<string> MakeRequest(string method, string urlMethod, Dictionary<string, dynamic> args = null, Dictionary<string, string> additionalParams = null) {
@@ -171,7 +220,9 @@ namespace TamTam.Bot
                 using(HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse()) {
                     using Stream stream = httpWebResponse.GetResponseStream();
                     using StreamReader streamReader = new StreamReader(stream);
-                    return JsonConvert.DeserializeObject<ReceivedUpdates>(await streamReader.ReadToEndAsync());
+                    var obj = JsonConvert.DeserializeObject<ReceivedUpdates>(await streamReader.ReadToEndAsync());
+                    obj.JsonRaw = await streamReader.ReadToEndAsync();
+                    return obj;
                 }
             }
             catch(Exception exc) {

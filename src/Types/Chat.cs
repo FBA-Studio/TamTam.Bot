@@ -12,8 +12,9 @@ namespace TamTam.Bot.Types
         public string? Title;
         public Icon? Icon;
 
-        [JsonConverter(typeof(UnixDateTimeConverter))]
+        [JsonConverter(typeof(MillisecondEpochConverter))]
         public DateTime LastEventTime;
+        
         public int ParticipantsCount;
         public long? OwnerId;
         public ChatParticipant[] Participants;

@@ -5,7 +5,8 @@ using TamTam.Bot.Types.Updates;
 namespace TamTam.Bot.Types {
     public class Update {
         public UpdateType UpdateType;
-
+        public string JsonRaw; 
+            
         #nullable enable
         public BotAdded? BotAdded;
 
@@ -35,5 +36,14 @@ namespace TamTam.Bot.Types {
 
         #nullable enable
         public UserRemoved? UserRemoved;
+        
+        #nullable enable
+        public MessageConstructionRequest? MessageConstructionRequest;
+        
+        #nullable enable
+        public MessageConstructed? MessageConstructed;
+        
+        #nullable enable
+        public MessageChatCreated? MessageChatCreated;
     }
 }
