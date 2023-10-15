@@ -1,19 +1,36 @@
+using Newtonsoft.Json;
 using TamTam.Bot.Types.Enums;
 
 namespace TamTam.Bot.Types {
     public class InlineKeyboardButton {
+        [JsonProperty("type")]
         public InlineButtonType Type { get; set; }
+        
+        [JsonProperty("text")]
         public string Text { get; set; }
+        
+        [JsonProperty("payload")]
         public string Payload { get; set; }
+        
+        [JsonProperty("intent")]
         public CallbackIntentType? Intent { get; set; }
-
+        
+        [JsonProperty("url")]
         public string Url { get; set; }
         
+        [JsonProperty("quick")]
         public bool? Quick { get; set; }
 
+        [JsonProperty("chat_title")]
         public string ChatTitle { get; set; }
+        
+        [JsonProperty("chat_description")]
         public string? ChatDescription { get; set; }
+        
+        [JsonProperty("start_payload")]
         public string? StartPayload { get; set; }
+        
+        [JsonProperty("uuid")]
         public int? Uuid { get; set; }
 
         public static InlineKeyboardButton ToCallback(string text, string payload, CallbackIntentType intent) {

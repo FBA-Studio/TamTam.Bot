@@ -19,6 +19,7 @@ namespace TamTam.Bot.Types.Enums {
         [EnumMember(Value = "pin_message")]
         PinMessage,
         
+        [EnumMember(Value = "write")]
         Write
     }
 }

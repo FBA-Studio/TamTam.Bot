@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -8,6 +7,8 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading;
 using TamTam.Bot.Types;
 using TamTam.Bot.Types.Enums;
 using TamTam.Bot.Types.Updates;
@@ -17,6 +18,7 @@ namespace TamTam.Bot {
         private static readonly string header = "application/json";
         private static readonly string api_url = "https://botapi.tamtam.chat";
         private static string Token = "access_token=token";
+        private static string _token = "token";
         private static int Limit = 100;
         private static int Timeout = 30000;
         private static long? Marker = null;
@@ -32,6 +34,7 @@ namespace TamTam.Bot {
         /// <param name="timeout">Timeout in seconds for update receiving. <code>Default: 30</code></param>
         public TamTamClient(string token, int limit = 100, int timeout = 30) {
             Token = "access_token=" + token;
+            _token = token;
             Limit = limit;
             Timeout = timeout * 1000;
             Marker = null;
@@ -41,20 +44,28 @@ namespace TamTam.Bot {
         /// </summary>
         /// <param name="updateHandler">Your function for update receiving, e.x. <code>static Task UpdateReceiver(TamTam.Bot.Types.Update update)</code></param>
         /// <param name="allowedUpdates">Your array of allowed updates. If <b>allowedUpdates</b> is null, you will receiving all update types. <code>Default: null</code></param>
-        public async void StartPolling(Func<Update, Task> updateHandler, UpdateType[] allowedUpdates = null) {
-            while(true) {
+        /// <param name="isBackground"><b>true</b>, if you want to run bot polling in background, but you must make a unreachable code, else your program will terminate. <code>Default: false</code></param>
+        public void StartPolling(Func<Update, Task> updateHandler, UpdateType[] allowedUpdates = null) { 
+            Thread polling = new Thread(() => Poller(updateHandler, allowedUpdates)) { Name = "Bot Polling", Priority = ThreadPriority.Normal, IsBackground = true};
+            polling.Start();
+        }
+
+        private async void Poller(Func<Update, Task> updateHandler, UpdateType[] allowedUpdates = null) {
+            while (true) {
                 var updates = await GetUpdates(Marker);
                 if (updates != null) {
                     Marker = Marker == null ? 0 : Marker;
                     Marker = Math.Max(Marker.Value, updates.Marker);
                     foreach (var update in updates.Updates) {
-                        if(allowedUpdates == null) {
+                        if (allowedUpdates == null) {
                             var upd = ParseRawUpdate(update, updates.JsonRaw);
                             await updateHandler.Invoke(upd);
                         }
                         else {
-                            foreach(var allwUpdate in allowedUpdates) {
-                                if(allwUpdate == update.UpdateType) {
+                            foreach (var allwUpdate in allowedUpdates)
+                            {
+                                if (allwUpdate == update.UpdateType)
+                                {
                                     var upd = ParseRawUpdate(update, updates.JsonRaw);
                                     await updateHandler.Invoke(upd);
                                 }
@@ -64,7 +75,6 @@ namespace TamTam.Bot {
                 }
             }
         }
-
         private Update ParseRawUpdate(UpdateRaw raw, string jsonRaw) {
             var update = new Update() { UpdateType = raw.UpdateType };
             switch (raw.UpdateType)
@@ -157,32 +167,46 @@ namespace TamTam.Bot {
         private async Task<string> MakeRequest(string method, string urlMethod, Dictionary<string, dynamic> args = null, Dictionary<string, string> additionalParams = null) {
             try {
                 var response = api_url + "/" + urlMethod + "?" + Token;
-                HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(response);
-                httpWebRequest.Method = method;
-                httpWebRequest.ContentType = header;
                 
                 if (additionalParams != null)
                     for (int i = 0; i < additionalParams.Count; i++)
                         response += "&" + additionalParams.Keys.ToArray()[i] + "=" +
                                     additionalParams.Values.ToArray()[i];
                 
-                if(args != null) {
-                    var jsonData = JsonConvert.SerializeObject(args);
-                    httpWebRequest.ContentLength = jsonData.Length;
-
-                    using (StreamWriter writer = new StreamWriter(await httpWebRequest.GetRequestStreamAsync())) {
-                        await writer.WriteAsync(jsonData);
-                        await writer.FlushAsync();
+                using (HttpClient client = new HttpClient()) {
+                    client.DefaultRequestHeaders.Add("Accept", header);
+                    switch (method) {
+                        case "GET": {
+                            return await client.GetStringAsync(response);
+                        }
+                        case "POST": {
+                            var data = JsonConvert.SerializeObject(args);
+                            var content = new StringContent(data, Encoding.UTF8, header);
+                            var result = await client.PostAsync(response, content);
+                            return await result.Content.ReadAsStringAsync();
+                        }
+                        case "DELETE": {
+                            var result = await client.DeleteAsync(response);
+                            return await result.Content.ReadAsStringAsync();
+                        }
+                        case "PUT": {
+                            var data = JsonConvert.SerializeObject(args);
+                            var content = new StringContent(data, Encoding.UTF8, header);
+                            var result = await client.PutAsync(response, content);
+                            return await result.Content.ReadAsStringAsync();
+                        }
+                        case "PATCH": {
+                            var data = JsonConvert.SerializeObject(args);
+                            var content = new StringContent(data, Encoding.UTF8, header);
+                            var result = await client.PatchAsync(response, content);
+                            return await result.Content.ReadAsStringAsync();
+                        }
                     }
-                }
-
-                using (HttpWebResponse httpWebResponse = (HttpWebResponse)await httpWebRequest.GetResponseAsync()) {
-                    using Stream stream = httpWebResponse.GetResponseStream();
-                    using StreamReader streamReader = new StreamReader(stream);
-                    return await streamReader.ReadToEndAsync();
+                    return null;
                 }
             }
             catch(Exception exc) {
+                Console.WriteLine(exc);
                 return null;
             }
         }
@@ -220,8 +244,9 @@ namespace TamTam.Bot {
                 using(HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse()) {
                     using Stream stream = httpWebResponse.GetResponseStream();
                     using StreamReader streamReader = new StreamReader(stream);
-                    var obj = JsonConvert.DeserializeObject<ReceivedUpdates>(await streamReader.ReadToEndAsync());
-                    obj.JsonRaw = await streamReader.ReadToEndAsync();
+                    var jsonRaw = await streamReader.ReadToEndAsync();
+                    var obj = JObject.Parse(jsonRaw).ToObject<ReceivedUpdates>();
+                    obj.JsonRaw = jsonRaw;
                     return obj;
                 }
             }
@@ -291,7 +316,7 @@ namespace TamTam.Bot {
             if (notify != null)
                 args.Add("notify", notify);
 
-            return args.Count > 0 ? JsonConvert.DeserializeObject<Chat>(await MakeRequest("PATCH", $"chats/{chatId}", args)) : null;
+            return args.Count > 0 ? JObject.Parse(await MakeRequest("PATCH", $"chats/{chatId}", args)).ToObject<Chat>() : null;
         }
         
         /// <summary>
@@ -406,10 +431,10 @@ namespace TamTam.Bot {
         /// <param name="block">Block user after removing, if <b>block = true</b>. <code>Default: null</code></param>
         /// <returns>Request status</returns>
         public async Task<RequestStatus> RemoveMemberAsync(long chatId, long userId, bool? block = null) {
-            var args = new Dictionary<string, dynamic>() { {"user_ids", userId} };
+            var args = new Dictionary<string, string>() { {"user_ids", userId.ToString()} };
             if (block != null)
-                args.Add("block", block);
-            return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("DELETE", $"chats/{chatId}/members", args));
+                args.Add("block", block.ToString().ToLower());
+            return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("DELETE", $"chats/{chatId}/members", additionalParams: args));
         }
         
         /// <summary>
@@ -448,9 +473,9 @@ namespace TamTam.Bot {
         /// <param name="disableLinkPreview">true, if you want disable link preview in message. <code>Default: true</code></param>
         /// <returns>Your sent message in <see cref="Message"/></returns>
         public async Task<Message> SendMessageAsync(long chatId, bool isChat, SendMessageParams sendParams,
-            bool disableLinkPreview = true)
+            bool disableLinkPreview = false)
         {
-            var urlArgs = new Dictionary<string, string>() { {"disable_link_preview", disableLinkPreview.ToString()} };
+            var urlArgs = new Dictionary<string, string>() { {"disable_link_preview", disableLinkPreview.ToString().ToLower()} };
             urlArgs.Add(isChat ? "chat_id" : "user_id", chatId.ToString());
 
             var args = sendParams.ToPostData();
@@ -514,7 +539,14 @@ namespace TamTam.Bot {
                 args.Add("attachments", attachments);
             }
 
-            return JsonConvert.DeserializeObject<Message>(await MakeRequest("POST", "messages", args, urlArgs));
+            try
+            {
+                return JsonConvert.DeserializeObject<Message>(await MakeRequest("POST", "messages", args, urlArgs));
+            }
+            catch
+            {
+                return null;
+            }
         }
         
         /// <summary>
@@ -598,7 +630,7 @@ namespace TamTam.Bot {
         public async Task<RequestStatus> DeleteMessageAsync(string messageId) {
             var urlArgs = new Dictionary<string, string>() { {"message_id", messageId} };
 
-            return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("PUT", "messages", additionalParams: urlArgs));
+            return JsonConvert.DeserializeObject<RequestStatus>(await MakeRequest("DELETE", "messages", additionalParams: urlArgs));
         }
         
         /// <summary>

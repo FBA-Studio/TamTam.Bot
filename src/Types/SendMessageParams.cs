@@ -35,7 +35,7 @@ namespace TamTam.Bot.Types {
         }
 
         public Dictionary<string, dynamic> ToPostData() {
-            var data = new Dictionary<string, dynamic>() { {"notify", Notify} };
+            var data = new Dictionary<string, dynamic>() { {"notify", Notify.ToString().ToLower()} };
             if (!string.IsNullOrEmpty(Text))
                 data.Add("text", Text);
             if (Link != null)

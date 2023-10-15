@@ -62,7 +62,7 @@ namespace TamTam.Bot.Types {
         public string? Placeholder;
 
         public Dictionary<string, dynamic> ToPostData() {
-            var data = new Dictionary<string, dynamic>() { {"allow_user_input", AllowUserInput} };
+            var data = new Dictionary<string, dynamic>() { {"allow_user_input", AllowUserInput.ToString().ToLower()} };
             
             if (Data != null)
                 data.Add("data", Data);
