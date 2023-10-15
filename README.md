@@ -7,5 +7,27 @@ dotnet add package TamTam.Bot
 ```
 
 ## Документация
-⚠️Документация находится в разработке! Документация от времени будет дополняться во время тестирования.
+### - Bot Long Poll
+- Получаем токен нашего бота в https://tt.me/PrimeBot
+- Инициализируем объект TamTamClient:
+```csharp
+using TamTam.Bot;
+using TamTam.Bot.Types;
+
+var bot = new TamTamClient("your token here");
+```
+- Стартуем лонг полл!
+```csharp
+static async Task Main() {
+  bot.StartPolling(YourUpdateHandler);
+  while(true) { //your backend } // Чтобы не завершилась программа
+}
+
+static async Task YourUpdateHandler(Update update) { // ⚠️Метод обязательно должен быть асинхронным Task, принимающий аргумент формата Update
+  // Код обработки вашего апдейта
+}
+
+```
+
+#### ❕Документация находится в разработке! В релизе мы доделаем её
 
